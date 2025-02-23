@@ -16,7 +16,7 @@ A comprehensive **appointment scheduling application** built with **React, Tailw
 ### Steps to Run the Project
 1. **Clone the Repository:**
    ```sh
-   git clone https://github.com/your-repo/appointment-scheduler.git
+   git clone https://github.com/SoumalyaM/Appointment-app.git
    cd appointment-scheduler
    ```
 
