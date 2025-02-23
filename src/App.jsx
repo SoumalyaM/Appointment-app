@@ -55,21 +55,21 @@ const colorPalette = {
     },
   },
   dark: {
-    primary: "from-violet-400 to-indigo-400",
-    secondary: "from-pink-400 to-rose-400",
-    tertiary: "from-emerald-400 to-teal-400",
-    background: "bg-gray-950",
-    card: "bg-gray-900/90",
-    border: "border-gray-700",
-    text: "text-gray-100",
-    textMuted: "text-gray-400",
-    hover: "hover:bg-gray-800",
-    input: "bg-gray-800/90",
+    primary: "from-violet-300 to-indigo-300",
+    secondary: "from-pink-300 to-rose-300",
+    tertiary: "from-emerald-300 to-teal-300",
+    background: "bg-slate-900",
+    card: "bg-slate-800/90",
+    border: "border-slate-700",
+    text: "text-slate-100",
+    textMuted: "text-slate-400",
+    hover: "hover:bg-slate-700",
+    input: "bg-slate-800/90",
     calendar: {
       today: "bg-violet-900/30",
-      past: "bg-gray-900/50",
-      todayBorder: "border-violet-700",
-      active: "hover:border-violet-600",
+      past: "bg-slate-800/50",
+      todayBorder: "border-violet-600",
+      active: "hover:border-violet-500",
     },
   },
 };
@@ -122,6 +122,121 @@ const AppProvider = ({ children }) => {
   );
 };
 
+const CalendarAppointmentCard = ({ appointment, date, isFirstDay }) => {
+  const { darkMode } = useContext(AppContext);
+  const [isHovered, setIsHovered] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const doctor = doctors.find((d) => d.id.toString() === appointment.doctorId);
+  const patient = patients.find(
+    (p) => p.id.toString() === appointment.patientId
+  );
+
+  const getAppointmentStyle = () => {
+    const styles = {
+      1: {
+        bg: darkMode ? "bg-violet-900/40" : "bg-violet-50",
+        text: darkMode ? "text-violet-200" : "text-violet-700",
+        hover: darkMode ? "hover:bg-violet-800/60" : "hover:bg-violet-100",
+      },
+      2: {
+        bg: darkMode ? "bg-pink-900/40" : "bg-pink-50",
+        text: darkMode ? "text-pink-200" : "text-pink-700",
+        hover: darkMode ? "hover:bg-pink-800/60" : "hover:bg-pink-100",
+      },
+      3: {
+        bg: darkMode ? "bg-emerald-900/40" : "bg-emerald-50",
+        text: darkMode ? "text-emerald-200" : "text-emerald-700",
+        hover: darkMode ? "hover:bg-emerald-800/60" : "hover:bg-emerald-100",
+      },
+    };
+
+    return styles[doctor.id];
+  };
+
+  const style = getAppointmentStyle();
+
+  return (
+    <div className="relative">
+      <motion.div
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        whileHover={{ scale: 1.02 }}
+        className={`${style.bg} ${style.hover} ${style.text} rounded-lg p-1.5 text-xs cursor-pointer transition-all duration-200`}
+      >
+        {isFirstDay && (
+          <div className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            <span className="font-medium">{appointment.startTime}</span>
+          </div>
+        )}
+
+        {isHovered && (
+          <div
+            className={`absolute left-0 z-[100] w-48 p-3 rounded-lg shadow-lg 
+              ${
+                darkMode
+                  ? "bg-slate-800 border-slate-700"
+                  : "bg-white border-slate-200"
+              } 
+              border mt-1`}
+            style={{
+              transform: "translateY(0)",
+              top: "100%",
+              left: "0",
+            }}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className={`font-medium ${style.text}`}>
+                  {patient.name}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowEditModal(true);
+                  }}
+                  className={`p-1 rounded-md ${
+                    darkMode ? "hover:bg-slate-700" : "hover:bg-slate-100"
+                  }`}
+                >
+                  <Edit className="h-3 w-3" />
+                </button>
+              </div>
+
+              <div className={darkMode ? "text-slate-400" : "text-slate-600"}>
+                <p className="text-xs">with {doctor.name}</p>
+                <p className="text-xs font-medium">{doctor.specialty}</p>
+              </div>
+
+              {appointment.description && (
+                <p
+                  className={`text-xs ${
+                    darkMode ? "text-slate-400" : "text-slate-600"
+                  } line-clamp-2`}
+                >
+                  {appointment.description}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Appointment</DialogTitle>
+          </DialogHeader>
+          <AppointmentForm
+            editAppointment={appointment}
+            onClose={() => setShowEditModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
 // Form component for creating and editing appointments
 const AppointmentForm = ({ onClose, editAppointment }) => {
   const { appointments, setAppointments, showNotification } =
@@ -296,7 +411,7 @@ const AppointmentForm = ({ onClose, editAppointment }) => {
 
 // Component for displaying upcoming appointments
 const UpcomingAppointments = () => {
-  const { appointments, searchQuery } = useContext(AppContext);
+  const { darkMode, appointments, searchQuery } = useContext(AppContext);
   const now = new Date();
   // Filter and sort upcoming appointments
   const upcomingAppointments = appointments
@@ -321,10 +436,18 @@ const UpcomingAppointments = () => {
   return (
     <motion.div className="w-96" {...fadeInUp} transition={{ delay: 0.2 }}>
       <div
-        className={`${colorPalette.light.card} dark:${colorPalette.dark.card} backdrop-blur-xl rounded-2xl shadow-xl border ${colorPalette.light.border} dark:${colorPalette.dark.border} p-6 mb-6`}
+        className={`${
+          darkMode ? "bg-slate-800/90" : "bg-white/70"
+        } backdrop-blur-xl rounded-2xl shadow-xl border ${
+          darkMode ? "border-slate-700" : "border-slate-200"
+        } p-6 mb-6`}
       >
         <h2
-          className={`text-xl font-bold bg-gradient-to-r ${colorPalette.light.primary} dark:${colorPalette.dark.primary} bg-clip-text text-transparent mb-4`}
+          className={`text-xl font-bold bg-gradient-to-r ${
+            darkMode
+              ? "from-violet-200 to-indigo-200"
+              : "from-violet-500 to-indigo-500"
+          } bg-clip-text text-transparent mb-4`}
         >
           Upcoming Appointments
         </h2>
@@ -350,8 +473,7 @@ const UpcomingAppointments = () => {
 
 // Individual appointment card component
 const AppointmentCard = ({ appointment }) => {
-  const { appointments, setAppointments, showNotification } =
-    useContext(AppContext);
+  const { darkMode } = useContext(AppContext);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const doctor = doctors.find((d) => d.id.toString() === appointment.doctorId);
@@ -362,28 +484,50 @@ const AppointmentCard = ({ appointment }) => {
   const getAppointmentStyle = () => {
     const styles = {
       1: {
-        bg: "bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/30 dark:to-indigo-900/30",
-        border: "border-violet-200/20 dark:border-violet-700/30",
-        text: "text-violet-700 dark:text-violet-300",
-        avatar: "bg-gradient-to-r from-violet-500 to-indigo-500",
-        description: "text-gray-600 dark:text-gray-400",
+        light: {
+          bg: "bg-gradient-to-r from-violet-50 to-indigo-50",
+          border: "border-violet-200/20",
+          text: "text-violet-700",
+          avatar: "bg-gradient-to-r from-violet-500 to-indigo-500",
+        },
+        dark: {
+          bg: "bg-gradient-to-r from-violet-900/40 to-indigo-900/40",
+          border: "border-violet-500/30",
+          text: "text-violet-200",
+          avatar: "bg-gradient-to-r from-violet-400 to-indigo-400",
+        },
       },
       2: {
-        bg: "bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/30 dark:to-rose-900/30",
-        border: "border-pink-200/20 dark:border-pink-700/30",
-        text: "text-pink-700 dark:text-pink-300",
-        avatar: "bg-gradient-to-r from-pink-500 to-rose-500",
-        description: "text-gray-600 dark:text-gray-400",
+        light: {
+          bg: "bg-gradient-to-r from-pink-50 to-rose-50",
+          border: "border-pink-200/20",
+          text: "text-pink-700",
+          avatar: "bg-gradient-to-r from-pink-500 to-rose-500",
+        },
+        dark: {
+          bg: "bg-gradient-to-r from-pink-900/40 to-rose-900/40",
+          border: "border-pink-500/30",
+          text: "text-pink-200",
+          avatar: "bg-gradient-to-r from-pink-400 to-rose-400",
+        },
       },
       3: {
-        bg: "bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30",
-        border: "border-emerald-200/20 dark:border-emerald-700/30",
-        text: "text-emerald-700 dark:text-emerald-300",
-        avatar: "bg-gradient-to-r from-emerald-500 to-teal-500",
-        description: "text-gray-600 dark:text-gray-400",
+        light: {
+          bg: "bg-gradient-to-r from-emerald-50 to-teal-50",
+          border: "border-emerald-200/20",
+          text: "text-emerald-700",
+          avatar: "bg-gradient-to-r from-emerald-500 to-teal-500",
+        },
+        dark: {
+          bg: "bg-gradient-to-r from-emerald-900/40 to-teal-900/40",
+          border: "border-emerald-500/30",
+          text: "text-emerald-200",
+          avatar: "bg-gradient-to-r from-emerald-400 to-teal-400",
+        },
       },
     };
-    return styles[doctor.id] || styles[1];
+
+    return darkMode ? styles[doctor.id].dark : styles[doctor.id].light;
   };
 
   const style = getAppointmentStyle();
@@ -409,8 +553,16 @@ const AppointmentCard = ({ appointment }) => {
                 {patient.name} with {doctor.name}
               </h3>
               <div className="flex items-center space-x-2 mt-1">
-                <Clock className="h-3 w-3 text-gray-400" />
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <Clock
+                  className={`h-3 w-3 ${
+                    darkMode ? "text-slate-400" : "text-gray-400"
+                  }`}
+                />
+                <p
+                  className={`text-sm ${
+                    darkMode ? "text-slate-300" : "text-gray-600"
+                  }`}
+                >
                   {appointment.startTime} -{" "}
                   {format(new Date(appointment.startDate), "MMM dd, yyyy")}
                   {isMultiDay &&
@@ -421,7 +573,11 @@ const AppointmentCard = ({ appointment }) => {
                 </p>
               </div>
               {appointment.description && (
-                <p className="text-sm text-gray-500 mt-1">
+                <p
+                  className={`text-sm ${
+                    darkMode ? "text-slate-400" : "text-gray-500"
+                  } mt-1`}
+                >
                   {appointment.description}
                 </p>
               )}
@@ -432,9 +588,13 @@ const AppointmentCard = ({ appointment }) => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowEditModal(true)}
-              className="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition-colors"
+              className={`p-2 rounded-lg ${
+                darkMode
+                  ? "hover:bg-slate-700/50 text-slate-300"
+                  : "hover:bg-white/50 text-gray-600"
+              } transition-colors`}
             >
-              <Edit className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <Edit className="h-4 w-4" />
             </motion.button>
           </div>
         </div>
@@ -461,26 +621,28 @@ const AppointmentCalendar = () => {
     useContext(AppContext);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
-  // Helper function to get days in current month
+
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const days = [];
-    // Fill in empty days at start of month
+
     for (let i = 0; i < firstDay.getDay(); i++) {
       days.push(null);
     }
-    // Fill in days of month
+
     for (let i = 1; i <= lastDay.getDate(); i++) {
       days.push(new Date(year, month, i));
     }
 
     return days;
   };
-  // Filter appointments for specific date
+
   const getAppointmentsForDate = (date) => {
+    if (!date) return [];
+
     return appointments.filter((apt) => {
       const aptStartDate = new Date(apt.startDate);
       const aptEndDate = new Date(apt.endDate);
@@ -489,23 +651,24 @@ const AppointmentCalendar = () => {
       // Reset time components for date comparison
       aptStartDate.setHours(0, 0, 0, 0);
       aptEndDate.setHours(0, 0, 0, 0);
-      currentDate.setHours(0, 0, 0, 0);
+      date.setHours(0, 0, 0, 0);
 
       // Check if the appointment falls within the date range
-      return (
-        currentDate >= aptStartDate &&
-        currentDate <= aptEndDate &&
-        (searchQuery.toLowerCase() === "" ||
-          doctors
-            .find((d) => d.id.toString() === apt.doctorId)
-            ?.name.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          patients
-            .find((p) => p.id.toString() === apt.patientId)
-            ?.name.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          apt.description?.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+      const matchesDate = date >= aptStartDate && date <= aptEndDate;
+
+      const matchesSearch =
+        searchQuery.toLowerCase() === "" ||
+        doctors
+          .find((d) => d.id.toString() === apt.doctorId)
+          ?.name.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        patients
+          .find((p) => p.id.toString() === apt.patientId)
+          ?.name.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        apt.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesDate && matchesSearch;
     });
   };
 
@@ -530,7 +693,11 @@ const AppointmentCalendar = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className={`p-2 rounded-xl ${colorPalette.light.hover} dark:${colorPalette.dark.hover} transition-colors`}
+                  className={`p-2 rounded-xl ${
+                    darkMode
+                      ? "hover:bg-slate-700/80 text-slate-200"
+                      : "hover:bg-slate-100 text-slate-700"
+                  } transition-colors`}
                   onClick={() =>
                     setCurrentDate(
                       new Date(currentDate.setMonth(currentDate.getMonth() - 1))
@@ -542,7 +709,11 @@ const AppointmentCalendar = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className={`p-2 rounded-xl ${colorPalette.light.hover} dark:${colorPalette.dark.hover} transition-colors`}
+                  className={`p-2 rounded-xl ${
+                    darkMode
+                      ? "hover:bg-slate-700/80 text-slate-200"
+                      : "hover:bg-slate-100 text-slate-700"
+                  } transition-colors`}
                   onClick={() =>
                     setCurrentDate(
                       new Date(currentDate.setMonth(currentDate.getMonth() + 1))
@@ -583,11 +754,13 @@ const AppointmentCalendar = () => {
           </motion.div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-4">
+          <div className="grid grid-cols-7 gap-4 ">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
               <div
                 key={day}
-                className={`text-sm font-medium ${colorPalette.light.textMuted} dark:${colorPalette.dark.textMuted} text-center py-2`}
+                className={`text-sm  font-medium ${
+                  darkMode ? "text-slate-400" : "text-slate-500"
+                } text-center py-2`}
               >
                 {day}
               </div>
@@ -595,56 +768,84 @@ const AppointmentCalendar = () => {
 
             <AnimatePresence>
               {getDaysInMonth(currentDate).map((date, index) => {
+                if (!date) {
+                  return (
+                    <motion.div
+                      key={`empty-${index}`}
+                      {...scaleIn}
+                      transition={{ delay: index * 0.02 }}
+                      className="h-24 p-2 rounded-xl border border-transparent"
+                    />
+                  );
+                }
+
                 const isToday =
-                  date && date.toDateString() === new Date().toDateString();
-                const isPast = date && isBefore(date, new Date());
+                  date.toDateString() === new Date().toDateString();
+                const isPast = isBefore(date, new Date());
+                const dateAppointments = getAppointmentsForDate(date);
 
                 return (
                   <motion.div
-                    key={index}
+                    key={date.toISOString()}
                     {...scaleIn}
                     transition={{ delay: index * 0.02 }}
-                    className={`min-h-28 p-2 rounded-xl border 
-                        ${
-                          date
-                            ? `${colorPalette.light.border} dark:${
-                                colorPalette.dark.border
-                              } 
-                             ${
-                               !isPast &&
-                               "hover:border-violet-200 dark:hover:border-violet-700 cursor-pointer"
-                             } 
-                             transition-colors`
-                            : "border-transparent"
-                        } 
-                        ${
-                          isToday
-                            ? "bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800"
-                            : isPast
-                            ? "bg-slate-50 dark:bg-slate-800/30"
-                            : `${colorPalette.light.card} dark:${colorPalette.dark.card}`
-                        }`}
+                    className={`h-24 p-2 rounded-xl border overflow-visible
+                      ${
+                        darkMode
+                          ? `border-slate-700 ${
+                              !isPast && "hover:border-violet-500"
+                            }`
+                          : `border-slate-200 ${
+                              !isPast && "hover:border-violet-200"
+                            }`
+                      }
+                      ${
+                        isToday
+                          ? darkMode
+                            ? "bg-violet-900/20 border-violet-600"
+                            : "bg-violet-50 border-violet-200"
+                          : isPast
+                          ? darkMode
+                            ? "bg-slate-800/30"
+                            : "bg-slate-50"
+                          : darkMode
+                          ? "bg-slate-800/90"
+                          : "bg-white/70"
+                      }
+                    `}
                   >
-                    {date && (
-                      <>
-                        <div
-                          className={`font-medium mb-2 ${
-                            isToday
-                              ? "text-blue-600 dark:text-blue-400"
-                              : isPast
-                              ? "text-gray-400 dark:text-gray-600"
-                              : ""
-                          }`}
-                        >
-                          {date.getDate()}
-                        </div>
-                        <div className="space-y-1">
-                          {getAppointmentsForDate(date).map((apt) => (
-                            <AppointmentCard key={apt.id} appointment={apt} />
-                          ))}
-                        </div>
-                      </>
-                    )}
+                    <div
+                      className={`font-medium mb-2 ${
+                        isToday
+                          ? "text-violet-400"
+                          : isPast
+                          ? darkMode
+                            ? "text-slate-600"
+                            : "text-slate-400"
+                          : darkMode
+                          ? "text-slate-200"
+                          : "text-slate-900"
+                      }`}
+                    >
+                      {date.getDate()}
+                    </div>
+                    <div className="space-y-1 relative ">
+                      {dateAppointments.map((apt) => {
+                        const aptStartDate = new Date(apt.startDate);
+                        const aptEndDate = new Date(apt.endDate);
+                        const isFirstDay =
+                          aptStartDate.toDateString() === date.toDateString();
+
+                        return (
+                          <CalendarAppointmentCard
+                            key={apt.id}
+                            appointment={apt}
+                            date={date}
+                            isFirstDay={isFirstDay}
+                          />
+                        );
+                      })}
+                    </div>
                   </motion.div>
                 );
               })}
@@ -680,36 +881,45 @@ const App = () => {
 
   return (
     <div
-      className={`min-h-screen ${colorPalette.light.background} dark:${colorPalette.dark.background}`}
+      className={`min-h-screen ${darkMode ? "bg-slate-900" : "bg-slate-50"}`}
     >
       <div className="max-w-8xl mx-auto px-4">
         <div className="flex items-center justify-between py-6">
           <div className="flex items-center space-x-8">
-            <h1 className="text-2xl font-bold">Appointments</h1>
+            <h1
+              className={`text-2xl font-bold ${
+                darkMode ? "text-white" : "text-slate-900"
+              }`}
+            >
+              Appointments
+            </h1>
             <nav className="flex space-x-4">
-              <a href="#" className="text-blue-600 font-medium">
+              <a href="#" className="text-blue-400 font-medium">
                 Calendar
               </a>
-              <a
-                href="#"
-                className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
-              >
+              <a href="#" className="text-slate-400 hover:text-slate-200">
                 Doctors
               </a>
-              <a
-                href="#"
-                className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
-              >
+              <a href="#" className="text-slate-400 hover:text-slate-200">
                 Patients
               </a>
             </nav>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={toggleDarkMode}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleDarkMode}
+              className={`${
+                darkMode
+                  ? "border-slate-700 bg-slate-800 hover:bg-slate-700"
+                  : "border-slate-200 bg-white"
+              }`}
+            >
               {darkMode ? (
-                <Sun className="h-4 w-4" />
+                <Sun className="h-4 w-4 text-slate-200" />
               ) : (
-                <Moon className="h-4 w-4" />
+                <Moon className="h-4 w-4 text-slate-700" />
               )}
             </Button>
           </div>
