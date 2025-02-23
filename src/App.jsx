@@ -103,6 +103,10 @@ const AppProvider = ({ children }) => {
     setNotification(message);
     setTimeout(() => setNotification(null), 3000);
   };
+  const deleteAppointment = (id) => {
+    setAppointments(appointments.filter((apt) => apt.id !== id));
+    showNotification("Appointment deleted successfully!");
+  };
 
   return (
     <AppContext.Provider
@@ -115,6 +119,7 @@ const AppProvider = ({ children }) => {
         showNotification,
         searchQuery,
         setSearchQuery,
+        deleteAppointment,
       }}
     >
       <div className={`min-h-screen ${darkMode ? "dark" : ""}`}>{children}</div>
@@ -122,8 +127,13 @@ const AppProvider = ({ children }) => {
   );
 };
 
-const CalendarAppointmentCard = ({ appointment, date, isFirstDay }) => {
-  const { darkMode } = useContext(AppContext);
+const CalendarAppointmentCard = ({
+  appointment,
+  date,
+  isFirstDay,
+  isLastDay,
+}) => {
+  const { darkMode, deleteAppointment } = useContext(AppContext);
   const [isHovered, setIsHovered] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -162,7 +172,15 @@ const CalendarAppointmentCard = ({ appointment, date, isFirstDay }) => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         whileHover={{ scale: 1.02 }}
-        className={`${style.bg} ${style.hover} ${style.text} rounded-lg p-1.5 text-xs cursor-pointer transition-all duration-200`}
+        className={`${style.bg} ${style.hover} ${
+          style.text
+        } rounded-lg p-1.5 text-xs cursor-pointer transition-all duration-200 ${
+          isFirstDay
+            ? "rounded-l-lg"
+            : isLastDay
+            ? "rounded-r-lg"
+            : "rounded-none"
+        }`}
       >
         {isFirstDay && (
           <div className="flex items-center gap-1">
@@ -191,17 +209,30 @@ const CalendarAppointmentCard = ({ appointment, date, isFirstDay }) => {
                 <span className={`font-medium ${style.text}`}>
                   {patient.name}
                 </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowEditModal(true);
-                  }}
-                  className={`p-1 rounded-md ${
-                    darkMode ? "hover:bg-slate-700" : "hover:bg-slate-100"
-                  }`}
-                >
-                  <Edit className="h-3 w-3" />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowEditModal(true);
+                    }}
+                    className={`p-1 rounded-md ${
+                      darkMode ? "hover:bg-slate-700" : "hover:bg-slate-100"
+                    }`}
+                  >
+                    <Edit className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteAppointment(appointment.id);
+                    }}
+                    className={`p-1 rounded-md ${
+                      darkMode ? "hover:bg-slate-700" : "hover:bg-slate-100"
+                    }`}
+                  >
+                    <Trash className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
 
               <div className={darkMode ? "text-slate-400" : "text-slate-600"}>
@@ -473,14 +504,14 @@ const UpcomingAppointments = () => {
 
 // Individual appointment card component
 const AppointmentCard = ({ appointment }) => {
-  const { darkMode } = useContext(AppContext);
+  const { darkMode, deleteAppointment } = useContext(AppContext);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const doctor = doctors.find((d) => d.id.toString() === appointment.doctorId);
   const patient = patients.find(
     (p) => p.id.toString() === appointment.patientId
   );
-  // Style configuration based on doctor ID
+
   const getAppointmentStyle = () => {
     const styles = {
       1: {
@@ -596,6 +627,18 @@ const AppointmentCard = ({ appointment }) => {
             >
               <Edit className="h-4 w-4" />
             </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => deleteAppointment(appointment.id)}
+              className={`p-2 rounded-lg ${
+                darkMode
+                  ? "hover:bg-slate-700/50 text-slate-300"
+                  : "hover:bg-white/50 text-gray-600"
+              } transition-colors`}
+            >
+              <Trash className="h-4 w-4" />
+            </motion.button>
           </div>
         </div>
       </motion.div>
@@ -643,33 +686,46 @@ const AppointmentCalendar = () => {
   const getAppointmentsForDate = (date) => {
     if (!date) return [];
 
-    return appointments.filter((apt) => {
-      const aptStartDate = new Date(apt.startDate);
-      const aptEndDate = new Date(apt.endDate);
-      const currentDate = new Date(date);
+    return appointments
+      .filter((apt) => {
+        const aptStartDate = new Date(apt.startDate);
+        const aptEndDate = new Date(apt.endDate);
+        const currentDate = new Date(date);
 
-      // Reset time components for date comparison
-      aptStartDate.setHours(0, 0, 0, 0);
-      aptEndDate.setHours(0, 0, 0, 0);
-      date.setHours(0, 0, 0, 0);
+        // Reset time components for date comparison
+        aptStartDate.setHours(0, 0, 0, 0);
+        aptEndDate.setHours(0, 0, 0, 0);
+        date.setHours(0, 0, 0, 0);
 
-      // Check if the appointment falls within the date range
-      const matchesDate = date >= aptStartDate && date <= aptEndDate;
+        // Check if the appointment falls within the date range
+        const matchesDate = date >= aptStartDate && date <= aptEndDate;
 
-      const matchesSearch =
-        searchQuery.toLowerCase() === "" ||
-        doctors
-          .find((d) => d.id.toString() === apt.doctorId)
-          ?.name.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        patients
-          .find((p) => p.id.toString() === apt.patientId)
-          ?.name.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        apt.description?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch =
+          searchQuery.toLowerCase() === "" ||
+          doctors
+            .find((d) => d.id.toString() === apt.doctorId)
+            ?.name.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          patients
+            .find((p) => p.id.toString() === apt.patientId)
+            ?.name.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          apt.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchesDate && matchesSearch;
-    });
+        return matchesDate && matchesSearch;
+      })
+      .map((apt) => {
+        const aptStartDate = new Date(apt.startDate);
+        const aptEndDate = new Date(apt.endDate);
+        const isFirstDay = aptStartDate.toDateString() === date.toDateString();
+        const isLastDay = aptEndDate.toDateString() === date.toDateString();
+
+        return {
+          ...apt,
+          isFirstDay,
+          isLastDay,
+        };
+      });
   };
 
   return (
@@ -754,11 +810,11 @@ const AppointmentCalendar = () => {
           </motion.div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-4 ">
+          <div className="grid grid-cols-7 gap-4">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
               <div
                 key={day}
-                className={`text-sm  font-medium ${
+                className={`text-sm font-medium ${
                   darkMode ? "text-slate-400" : "text-slate-500"
                 } text-center py-2`}
               >
@@ -790,29 +846,25 @@ const AppointmentCalendar = () => {
                     {...scaleIn}
                     transition={{ delay: index * 0.02 }}
                     className={`h-24 p-2 rounded-xl border overflow-visible
-                      ${
-                        darkMode
-                          ? `border-slate-700 ${
-                              !isPast && "hover:border-violet-500"
-                            }`
-                          : `border-slate-200 ${
-                              !isPast && "hover:border-violet-200"
-                            }`
-                      }
-                      ${
-                        isToday
-                          ? darkMode
-                            ? "bg-violet-900/20 border-violet-600"
-                            : "bg-violet-50 border-violet-200"
-                          : isPast
-                          ? darkMode
-                            ? "bg-slate-800/30"
-                            : "bg-slate-50"
-                          : darkMode
-                          ? "bg-slate-800/90"
-                          : "bg-white/70"
-                      }
-                    `}
+            ${
+              darkMode
+                ? `border-slate-700 ${!isPast && "hover:border-violet-500"}`
+                : `border-slate-200 ${!isPast && "hover:border-violet-200"}`
+            }
+            ${
+              isToday
+                ? darkMode
+                  ? "bg-violet-900/20 border-violet-600"
+                  : "bg-violet-50 border-violet-200"
+                : isPast
+                ? darkMode
+                  ? "bg-slate-800/30"
+                  : "bg-slate-50"
+                : darkMode
+                ? "bg-slate-800/90"
+                : "bg-white/70"
+            }
+          `}
                   >
                     <div
                       className={`font-medium mb-2 ${
@@ -829,20 +881,35 @@ const AppointmentCalendar = () => {
                     >
                       {date.getDate()}
                     </div>
-                    <div className="space-y-1 relative ">
+                    <div className="space-y-1 relative">
                       {dateAppointments.map((apt) => {
                         const aptStartDate = new Date(apt.startDate);
                         const aptEndDate = new Date(apt.endDate);
-                        const isFirstDay =
-                          aptStartDate.toDateString() === date.toDateString();
+                        const isFirstDay = apt.isFirstDay;
+                        const isLastDay = apt.isLastDay;
 
                         return (
-                          <CalendarAppointmentCard
+                          <motion.div
                             key={apt.id}
-                            appointment={apt}
-                            date={date}
-                            isFirstDay={isFirstDay}
-                          />
+                            className={`relative ${
+                              isFirstDay
+                                ? "rounded-l-lg"
+                                : isLastDay
+                                ? "rounded-r-lg"
+                                : "rounded-none"
+                            } ${
+                              isFirstDay || isLastDay
+                                ? "bg-opacity-100"
+                                : "bg-opacity-50"
+                            }`}
+                          >
+                            <CalendarAppointmentCard
+                              appointment={apt}
+                              date={date}
+                              isFirstDay={isFirstDay}
+                              isLastDay={isLastDay}
+                            />
+                          </motion.div>
                         );
                       })}
                     </div>
