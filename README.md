@@ -1,6 +1,6 @@
 # 📅 Appointment Scheduler - React Application
 
-A comprehensive **appointment scheduling application** built with **React, Tailwind CSS, and Framer Motion**. It allows users to manage appointments, view them in a calendar, and filter/search through upcoming appointments.
+A comprehensive **appointment scheduling application** built with **React, Tailwind CSS, and Framer Motion**. It allows users to manage appointments, view them in a calendar, and search through upcoming appointments.
 
 ---
 
